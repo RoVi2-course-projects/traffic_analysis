@@ -4,27 +4,36 @@ import cv2
 import math
 import get_speed
 import time
+from kalman_filtering_speed import kalman_filter
+
 
 def draw_optical_flow(good_new, good_old, mask, frame):
-
+    xhat = 0.0 # initial guess, estimate of x
+    p = 1.0 # initial guess, error estimate
+    kf = kalman_filter()
     for i,(new,old) in enumerate(zip(good_new,good_old)):
         a,b = new.ravel()
         c,d = old.ravel()
 
         speed = get_speed.calculate_speed(a, b, c, d, 50, 25)
+        xhat, p = kf.kalman_filter_speed(speed, xhat, p)
 
         mask = cv2.line(mask, (a,b),(c,d),(0,0,255), 2)
         #frame = cv2.circle(frame,(a,b),9,color[i].tolist(),-1)
         frame = cv2.circle(frame,(a,b),9,(0,0,255),2)
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(frame,str(speed),(a,b), font, 1,(255,255,255),2,cv2.LINE_AA)
+        cv2.putText(frame,str(xhat)[0:4],(a,b), font, 1,(255,255,255),
+                    2,cv2.LINE_AA)
     return mask, frame
 
+# inspiration found from git files referenced here:
+# https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
 def optical_flow_tracking(list_of_poi, frame, old_gray, mask0):
     # Parameters for lucas kanade optical flow
     lk_params = dict( winSize  = (15,15),
                       maxLevel = 2,
-                      criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                      criteria = (cv2.TERM_CRITERIA_EPS |
+                                  cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     mask = mask0
     p0 = list_of_poi
@@ -32,7 +41,8 @@ def optical_flow_tracking(list_of_poi, frame, old_gray, mask0):
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # calculate optical flow
-    p1, st, err = cv2.calcOpticalFlowPyrLK(old_g, frame_gray, p0, None, **lk_params)
+    p1, st, err = cv2.calcOpticalFlowPyrLK(old_g, frame_gray, p0,
+                                           None, **lk_params)
     # Select good points
     good_new = p1[st==1]
     good_old = p0[st==1]
@@ -49,6 +59,7 @@ def optical_flow_tracking(list_of_poi, frame, old_gray, mask0):
     return p0, old_g, mask
 
 if __name__ == "__main__":
+
 
     #test
     cap = cv2.VideoCapture('videoplayback.mp4')
@@ -73,7 +84,8 @@ if __name__ == "__main__":
     while(1):
 
         ret,frame = cap.read()
-        poi, old_gray, mask = optical_flow_tracking(poi, frame, old_gray, mask)
+        poi, old_gray, mask = optical_flow_tracking(poi, frame,
+                                                    old_gray, mask)
 
         k = cv2.waitKey(30) & 0xff
         if k == 27:
