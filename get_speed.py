@@ -16,7 +16,6 @@ def calculate_speed(old_pos_x,old_pos_y, new_pos_x, new_pos_y,
     speed = round(dist_between_coordinates * fps * scale,1)
     # convert to km/t
     speed = speed * 3.6
-
     return speed
 
 
