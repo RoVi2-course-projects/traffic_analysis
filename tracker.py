@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 """
 Module for implementing tracking algorithms.
+
+TODO: Create a class containing the background subtractor and its
+parameters.
+Create as well a method for detecting contours and their centroids.
 """
 # Standard libraries
 import numpy as np
@@ -8,17 +12,25 @@ import numpy as np
 import cv2
 
 
+def extract_background(subtractor, frame, 
+                       kernel=np.array([[0,1,0], [1,1,1],
+                                       [0,1,0]]).astype(np.uint8)):
+    """
+    Get a binnarized image with the foreground (1s) and background (0s).
+    """
+    fg_mask = subtractor.apply(frame)
+    fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
+    return fg_mask
+
+
 def main(video_path="./resources/trafic-video.mp4"):
-    # src_points = np.array([[74,347],[604,193],[508,60],[309,94]])
-    # src_points_inv = np.array([[347, 74],[193, 604],[60, 508],[94, 309]])
     video = cv2.VideoCapture(video_path)
-    fgbg = cv2.bgsegm.createBackgroundSubtractorGMG()
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    fgbg = cv2.bgsegm.createBackgroundSubtractorMOG(history=500)
     while(1):
         ret, frame = video.read()
-        # fgmask = fgbg.apply(frame)
-        fgmask = fgbg.apply(frame)
-        # fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
+        if not ret:
+            break
+        fgmask = extract_background(fgbg, frame)
         cv2.imshow('frame', frame)
         cv2.imshow('frame2', fgmask)
         k = cv2.waitKey(30) & 0xff
@@ -27,6 +39,7 @@ def main(video_path="./resources/trafic-video.mp4"):
     video.release()
     cv2.destroyAllWindows()
     return
+
 
 if __name__ == "__main__":
     main()
