@@ -13,8 +13,8 @@ import cv2
 
 
 class BackgroundSubtractor(object):
-    def __init__(self, h=500, kernel=np.array([[0,1,0], [1,1,1],
-                                       [0,1,0]]).astype(np.uint8)):
+    def __init__(self, h=500, kernel=np.array([[1,1,1], [1,1,1],
+                                       [1,1,1]]).astype(np.uint8)):
         # Current working frame and binarized image with the background.
         self._frame = None
         self._fg_mask = None
@@ -22,6 +22,10 @@ class BackgroundSubtractor(object):
         self.kernel = kernel
         # Subtractor algorithm for getting the background.
         self._subtractor = cv2.bgsegm.createBackgroundSubtractorMOG(history=h)
+        # self._subtractor = cv2.createBackgroundSubtractorMOG2(history=h,
+        #         detectShadows=False)
+        # self._subtractor = cv2.bgsegm.createBackgroundSubtractorGMG(200)
+
         # List with the coordinates of all the detected centroids.
         self._centroids = []
 
@@ -34,6 +38,8 @@ class BackgroundSubtractor(object):
         self._fg_mask = self._subtractor.apply(self._frame)
         self._fg_mask = cv2.morphologyEx(self._fg_mask, cv2.MORPH_OPEN,
                                          self.kernel)
+        self._fg_mask = cv2.morphologyEx(self._fg_mask, cv2.MORPH_CLOSE,
+                                         self.kernel, iterations=5)
         return self._fg_mask
 
     def find_centroids(self):
