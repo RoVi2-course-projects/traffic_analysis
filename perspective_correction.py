@@ -19,6 +19,16 @@ def image_transformation(frame, shape, src_points, dst_points):
     
     return transformed_img
 
+def GSD_px_to_meters:(pixels):
+    p1 = [437,373]
+    p2 = [604,312]
+    googlemap_distance = 38.39 #[meters]
+    r = sqrt(pow(p1[0]-p2[0],2) + pow(p1[1]-p2[1],2))
+    scale = r/googlemap_distance
+
+    meters = pixels/scale
+    return meters
+
 def surf_detection(frame, reference_image):
     surf =  cv2.xfeatures2d.SIFT_create()
     key_points1, descriptors1 = surf.detectAndCompute(frame, None)
