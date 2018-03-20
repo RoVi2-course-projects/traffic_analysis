@@ -5,38 +5,62 @@ import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import clear_output
 
+def mask_reference_img(img):
+    points_set1 = np.array([[400,0],[400,535],[650,535],[600,0]])
+    points_set2 = np.array([[0,520],[0,535],[340,535],[999,350],[999,170]])
+    cv2.fillConvexPoly(img, np.int32([points_set1]), (0,0,0))
+    cv2.fillConvexPoly(img, np.int32([points_set2]), (0,0,0))
+    
+    return img
+
 def image_transformation(frame, shape, src_points, dst_points):
-    homography = find_homography(src_points,dst_points)
-    transformed_img = perspective_correction(frame, shape, homography)
+    homography, mask = cv2.findHomography(src_points,dst_points,cv2.RANSAC,5.0)
+    transformed_img = perspective_correction(frame, (shape[0],shape[1]), homography)
     
     return transformed_img
 
-def surf_detection(frame):
-    surf =  cv2.SIFT_create()
-    key_points, descriptors = surf.detectAndCompute(frame, None)
-    frame = cv2.drawKeypoints(frame, key_points, None, (255,0,0), 4)
-    
-    return frame
+def surf_detection(frame, reference_image):
+    surf =  cv2.xfeatures2d.SIFT_create()
+    key_points1, descriptors1 = surf.detectAndCompute(frame, None)
+    key_points2, descriptors2 = surf.detectAndCompute(reference_image, None) 
 
-def playvideowin(vid, shape, src_points, dst_points, winname='video'):
+    bf = cv2.BFMatcher()
+    #matches = bf.match(descriptors1,descriptors2)
+    matches = bf.knnMatch(descriptors1,descriptors2,k=2)
+
+    good = []
+    for m,n in matches:    
+        if m.distance < 0.75*n.distance:
+            good.append(m)
+   
+    src_points = np.float32([ key_points1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+    dst_points = np.float32([ key_points2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+    #cv2.drawKeypoints(frame, good, frame, (0,0,255),4) 
+    for point in src_points:
+        cv2.circle(frame, (point[0][0],point[0][1]), 5, (0,0,255)) 
+    return image_transformation(frame, reference_image.shape, src_points, dst_points)
+
+
+def playvideowin(vid, reference_image, src_points, dst_points, winname='video'):
+    
     while(1):
         ret, frame = vid.read()
         if not ret:
             vid.release()
             print("Released Video Resource")
             break
-    
-        frame = image_transformation(frame,shape,src_points,dst_points)
-        frame = surf_detection(frame)
+        
+        frame = surf_detection(frame, reference_image) 
 
         cv2.namedWindow(winname)
         cv2.startWindowThread() #this normally isn't required
         cv2.imshow(winname,frame)
-        k=cv2.waitKey(10)
+        k=cv2.waitKey(2)
         
         if k==27: #exit is Esc is pressed
             break
 
+    #cv2.imwrite("./resources/transformed_img.jpg", frame);
     cv2.destroyAllWindows() 
 
 def perspective_correction(frame, shape, homography):

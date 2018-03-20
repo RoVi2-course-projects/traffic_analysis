@@ -14,17 +14,23 @@ def main():
     # Paths to files
     vid_path = "../videos/videoplayback"
     map_path = "./resources/googlemap.png"
-    
+    ref_img_path = "./resources/transformed_img.jpg"   
+ 
     # Load video and shape of the map
     vid = cv2.VideoCapture(vid_path)
-    shape = pc.get_map_shape(map_path)
+    reference_img = cv2.imread(ref_img_path, -1)
+
+    reference_img = pc.mask_reference_img(reference_img)    
+
+    #cv2.imshow('image',reference_img)
+    #cv2.waitKey(0)
 
     # Perspectiv transformation points, ROI
     src_points = np.array([[74,347],[604,193],[508,60],[309,94]])   
     dst_points = np.array([[31,511],[892,451],[963,29],[444,67]])
     
     # Play video
-    pc.playvideowin(vid, shape, src_points, dst_points)
+    pc.playvideowin(vid, reference_img, src_points, dst_points)
 
 if __name__ == "__main__":
-    main()
+   main()
