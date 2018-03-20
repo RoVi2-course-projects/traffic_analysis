@@ -14,7 +14,7 @@ def mask_reference_img(img):
     return img
 
 def image_transformation(frame, shape, src_points, dst_points):
-    homography, mask = cv2.findHomography(src_points,dst_points,cv2.RANSAC,5.0)
+    homography, mask = cv2.findHomography(src_points,dst_points,cv2.RANSAC,10.0)
     transformed_img = perspective_correction(frame, (shape[0],shape[1]), homography)
     
     return transformed_img
@@ -30,7 +30,7 @@ def surf_detection(frame, reference_image):
 
     good = []
     for m,n in matches:    
-        if m.distance < 0.75*n.distance:
+        if m.distance < 0.8*n.distance:
             good.append(m)
    
     src_points = np.float32([ key_points1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
