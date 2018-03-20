@@ -36,8 +36,8 @@ def surf_detection(frame, reference_image):
     src_points = np.float32([ key_points1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
     dst_points = np.float32([ key_points2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
     #cv2.drawKeypoints(frame, good, frame, (0,0,255),4) 
-    for point in src_points:
-        cv2.circle(frame, (point[0][0],point[0][1]), 5, (0,0,255)) 
+    #for point in src_points:
+    #    cv2.circle(frame, (point[0][0],point[0][1]), 5, (0,0,255)) 
     return image_transformation(frame, reference_image.shape, src_points, dst_points)
 
 
