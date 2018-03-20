@@ -37,8 +37,9 @@ def main():
         centroids = np.asarray(centroids)
         print(type(centroids))
         print(centroids)
-
-        centroids, old_gray, mask = oft.optical_flow_tracking(centroids, frame, old_gray, mask)
+        if centroids.size:
+            centroids = centroids.reshape((-1,1,2)).astype(np.float32)
+            centroids, old_gray, mask = oft.optical_flow_tracking(centroids, frame, old_gray, mask)
 
         # # Draw a circcle surrounding every detected moving shape.
         # for centroid in centroids:
