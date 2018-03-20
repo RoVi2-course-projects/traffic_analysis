@@ -10,6 +10,8 @@ centroids coordinates.
 import numpy as np
 # Third party libraries
 import cv2
+# Local librearies
+import perspective_correction as pc
 
 
 class BackgroundSubtractor(object):
@@ -25,7 +27,6 @@ class BackgroundSubtractor(object):
         # self._subtractor = cv2.createBackgroundSubtractorMOG2(history=h,
         #         detectShadows=False)
         # self._subtractor = cv2.bgsegm.createBackgroundSubtractorGMG(200)
-
         # List with the coordinates of all the detected centroids.
         self._centroids = []
 
@@ -36,13 +37,11 @@ class BackgroundSubtractor(object):
     def extract_background(self):
         """Get a binnarized image where the foreground is 1."""
         self._fg_mask = self._subtractor.apply(self._frame)
-        self._fg_mask = cv2.morphologyEx(self._fg_mask, cv2.MORPH_OPEN,
-                                         self.kernel)
         self._fg_mask = cv2.morphologyEx(self._fg_mask, cv2.MORPH_CLOSE,
                                          self.kernel, iterations=5)
         return self._fg_mask
 
-    def find_centroids(self):
+    def find_centroids(self, min_size=7, max_size=100):
         """
         Find the centroids (X,Y) coordinates of all detected contours.
         """
@@ -52,8 +51,10 @@ class BackgroundSubtractor(object):
         # The centroid of each contour is the arithmetic mean of all of its
         # points X and Y coordinates.
         for cnt in contours:
+            # import pdb; pdb.set_trace()
+            if cnt.shape[0] < min_size or cnt.shape[0] > max_size:
+                continue
             centroid = cnt.mean(axis=0)[0].astype(np.uint16)
-            # centroids.append(centroid)
             # Store the centroid as a tuple, for further usage with cv.circle
             centroids.append((centroid[0], centroid[1]))
         self._centroids = centroids
@@ -61,6 +62,13 @@ class BackgroundSubtractor(object):
 
 
 def main(video_path="./resources/trafic-video.mp4"):
+    map_path = "./resources/googlemap.png"
+    ref_img_path = "./resources/transformed_img.jpg"   
+ 
+    # Load reference image for stabilization.
+    reference_img = cv2.imread(ref_img_path, -1)
+    reference_img = pc.mask_reference_img(reference_img)  
+
     video = cv2.VideoCapture(video_path)
     # Instantiate the main class for subtracting the background.
     bg_subtractor = BackgroundSubtractor()
@@ -68,6 +76,7 @@ def main(video_path="./resources/trafic-video.mp4"):
         ret, frame = video.read()
         if not ret:
             break
+        frame = pc.surf_detection(frame, reference_img)
         # Update the video frame and refresh the background image.
         bg_subtractor.update_frame(frame)
         fgmask = bg_subtractor.extract_background()

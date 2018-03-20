@@ -19,7 +19,7 @@ def image_transformation(frame, shape, src_points, dst_points):
     
     return transformed_img
 
-def GSD_px_to_meters:(pixels):
+def GSD_px_to_meters(pixels):
     p1 = [437,373]
     p2 = [604,312]
     googlemap_distance = 38.39 #[meters]
