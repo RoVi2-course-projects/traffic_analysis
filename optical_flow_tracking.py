@@ -7,34 +7,42 @@ import time
 from kalman_filtering_speed import kalman_filter
 
 class OpticalFlowTracking:
-    def draw_optical_flow(self, good_new, good_old, mask, frame):
-        xhat = 0.0 # initial guess, estimate of x
-        p = 1.0 # initial guess, error estimate
+    def draw_optical_flow(self, good_new, good_old, mask, frame, xhat_in):
         kf = kalman_filter()
-        for i,(new,old) in enumerate(zip(good_new,good_old)):
+        #import pdb; pdb.set_trace()
+        for i,(new,old,xhat) in enumerate(zip(good_new,good_old,xhat_in)):
             a,b = new.ravel()
             c,d = old.ravel()
+            e,f = xhat.ravel()
+            #print(e,f)
+            if i == 8:
+                speed = get_speed.calculate_speed(a, b, c, d, 50, 25)
 
-            speed = get_speed.calculate_speed(a, b, c, d, 50, 25)
-            xhat, p = kf.kalman_filter_speed(speed, xhat, p)
+                #xhat_speed, phat_speed = kf.kalman_filter_speed(speed, x_s, p_s)
+                print (speed)
+                print ("stringspeed", str(speed)[0:5])
 
-            mask = cv2.line(mask, (a,b),(c,d),(0,0,255), 2)
-            #frame = cv2.circle(frame,(a,b),9,color[i].tolist(),-1)
-            frame = cv2.circle(frame,(a,b),9,(0,0,255),2)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame,str(xhat)[0:4],(a,b), font, 1,(255,255,255),
+                mask = cv2.line(mask, (a,b),(c,d),(0,255,0), 2)
+                mask = cv2.line(mask, (a,b),(int(e),int(f)),(255,0,255), 2)
+                #frame = cv2.circle(frame,(a,b),9,color[i].tolist(),-1)
+                frame = cv2.circle(frame,(a,b),9,(0,0,255),2)
+                frame = cv2.circle(frame,(int(e),int(f)),9,(255,0,0),2)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(frame,str(speed)[0:5],(a,b), font, 0.8,(255,255,255),
                         2,cv2.LINE_AA)
         return mask, frame
 
     # inspiration found from git files referenced here:
     # https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
-    def optical_flow_tracking(self, list_of_poi, frame, old_gray, mask0):
+    # def optical_flow_tracking(self, list_of_poi, frame, old_gray, mask0,
+    #                           xhat, phat):
+    def optical_flow_tracking(self, list_of_poi, frame, old_gray, mask0, xhat, phat):
         # Parameters for lucas kanade optical flow
+# Parameters for lucas kanade optical flow
         lk_params = dict( winSize  = (15,15),
                           maxLevel = 2,
                           criteria = (cv2.TERM_CRITERIA_EPS |
                                       cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-
         mask = mask0
         p0 = list_of_poi
         old_g = old_gray
@@ -46,17 +54,23 @@ class OpticalFlowTracking:
         # Select good points
         good_new = p1[st==1]
         good_old = p0[st==1]
+        #import pdb; pdb.set_trace()
 
+        kf = kalman_filter()
+        xhat_new, phat_new = kf.kalman_filter_position(good_new, good_old, xhat, phat)
+
+        #print(xhat_new)
         # draw the tracks and speed
-        mask, frame = self.draw_optical_flow(good_new, good_old, mask, frame)
+        mask, frame = self.draw_optical_flow(good_new, good_old, mask, frame, xhat_new)
         img = cv2.add(frame,mask)
         cv2.imshow('frame',img)
+        #import pdb; pdb.set_trace()
 
         # Now update the previous frame and previous points
         old_g = frame_gray.copy()
         p0 = good_new.reshape(-1,1,2)
 
-        return p0, old_g, mask
+        return p0, old_g, mask, xhat_new, phat_new
 
 if __name__ == "__main__":
 
@@ -82,11 +96,14 @@ if __name__ == "__main__":
     #p0 = p0[80:82,:,:] # for other cars
     poi = p0
     mask = np.zeros_like(old_frame)
+    sz = (centroids.size,) # size of array
+    xhat = np.zeros(sz)      # a posteri estimate of x
+    phat = np.zeros(sz)         # a posteri error estimate
     while(1):
 
         ret,frame = cap.read()
         poi, old_gray, mask = oft.optical_flow_tracking(poi, frame,
-                                                    old_gray, mask)
+                                                    old_gray, mask, xhat, phat)
 
         print(type(poi))
         print(poi)
